@@ -1,0 +1,211 @@
+package openlist:plugin-driver@0.1.0;
+
+// 定义插件生态系统中所有通用的数据结构。
+interface types {
+    // 依赖项：从 wasi:io/streams 导入 output-stream
+    use wasi:clocks/monotonic-clock@0.2.7.{duration};
+    use wasi:io/streams@0.2.7.{input-stream, output-stream};
+    use wasi:io/poll@0.2.7.{pollable};
+    use wasi:http/types@0.2.7.{headers};
+
+    variant driver-errors {
+        // drivre 资源无效
+        invalid-handle,
+        // 表示功能未实现。
+        not-implemented,
+        // 表示功能不支持
+        not-support,
+        // 表示资源未找到。
+        not-found,
+        // 表示路径是文件而非目录。
+        not-folder,
+        // 表示路径是目录而非文件。
+        not-file,
+        // 包含描述信息的通用错误。
+        generic(string),
+        //授权失效，此时驱动处于无法自动恢复的状态
+        unauthorized(string),
+    }
+
+    // 代表宿主端可读文件的资源。
+    resource readable {
+        // 只允许调用一次，会消耗底层的reader导致stream-range无法调用
+        // 适合支持流上传，并且不需要预算hash的情况
+        streams: func() -> result<input-stream, string>;
+        // 从文件的指定偏移量读取一块数据,并且不消耗流。
+        // 当读取总量超过内部设置大小后会缓存整个文件
+        // stream-peek只能存在一个实例，
+        // 与stream-range互斥，必须销毁后才能调用stream-range
+        peek: func(offset: u64, len: u64) -> result<input-stream, string>;
+        // 缓存整个文件
+        // stream-range 允许存在多个实例
+        // 为了减少复杂性，调用后stream-peek将永远返回错误
+        range: func(offset: u64, len: u64) -> result<input-stream, string>;
+        // 获取或计算文件的hash，会缓存整个文件
+        get-hasher: func(hashs: list<hash-alg>) -> result<list<hash-info>, string>;
+        // 更新上传进度[0,100]
+        update-progress: func(progress: f64);
+    }
+
+    // 代表文件或目录的丰富数据结构。
+    // 为了性能，此结构在宿主和插件之间按值传递。
+    record object {
+        // 对象的绝对路径。
+        path: string,
+        // 对象的id信息
+        id: string,
+        // 对象的名称。
+        name: string,
+        // 对象的大小（字节）。
+        size: s64,
+        // 是否为目录。
+        is-folder: bool,
+        // 创建时间戳
+        created: duration,
+        // 修改时间戳
+        modified: duration,
+        // 缩略图链接。
+        thumb: option<string>,
+        // 文件的哈希信息列表。
+        hashes: list<hash-info>,
+        // 用于存储驱动特定的、非标准的元数据。
+        extra: list<tuple<string, string>>,
+    }
+
+    // 封装上传操作的所有参数。
+    record upload-request {
+        object: object,
+        // 指向宿主端文件内容的句柄。
+        // 由host控制释放
+        content: borrow<readable>,
+        // 如果是覆盖上传，宿主会提供被覆盖文件的原始对象数据。
+        target: option<object>,
+    }
+
+    // 描述一个需要用户配置的字段。宿主使用它来动态构建设置界面。
+    record form-field {
+        // 字段的唯一标识符（键）。
+        name: string,
+        // 显示给用户的标签。
+        label: string,
+        // 字段的输入类型，用于 UI 渲染。
+        kind: field-kind,
+        // 是否必填
+        required: bool,
+        // 字段的帮助或提示信息。
+        help: string,
+    }
+
+    // 定义 `form-field` 在 UI 中渲染的控件类型。
+    variant field-kind {
+        string-kind(string),
+        password-kind(string),
+        number-kind(f64),
+        boolean-kind(bool),
+        text-kind(string),
+        select-kind(list<string>),
+    }
+
+    // 驱动的静态属性，镜像 Go 代码中的 `Config` 结构体。
+    record driver-props {
+        // 网盘名称
+        name: string,
+        // 只能通过代理下载(本地文件)
+        only-proxy: bool,
+        // 不要缓存 object
+        no-cache: bool,
+
+        alert: string,
+
+        // 不支持覆盖上传
+        no-overwrite-upload: bool,
+        proxy-range: bool,
+        // 网盘能力标记
+        capabilitys: capability,
+    }
+
+    // 驱动支持的能力列表。
+    flags capability {
+        get-file,
+        list-file,
+        link-file,
+        mkdir-file,
+        rename-file,
+        move-file,
+        remove-file,
+        copy-file,
+        upload-file,
+    }
+
+    // 定义文件的字节范围。
+    record range-spec { offset: u64, size: option<u64>, %stream: borrow<output-stream> }
+
+    record link-args { 
+        ip: string,
+        // 释放由host端控制
+        headers: borrow<headers>,
+    }
+    // 包含直链所需的信息。
+    record link-info { url: string, headers: headers ,expiration: option<duration> }
+
+    record link-result {
+        // 某些网盘需要在link时才能获取到正确的信息
+        file: option<object>,
+        %resource: link-resource,
+    }
+    
+    // `link` 操作的返回结果，可以是直链或数据流。
+    variant link-resource {
+        direct(link-info),
+        range-reader,
+        //reader(range-stream),
+    }
+
+    // 定义支持的哈希算法类型。
+    variant hash-alg { md5, sha1, sha256, gcid }
+    // 包含哈希算法和其计算值的记录。
+    record hash-info { alg: hash-alg, val: string }
+
+    // 代表可取消操作的上下文资源。
+    resource cancellable {
+        // 返回一个 pollable，当取消请求发生时，它将变为就绪状态。
+        subscribe: func() -> pollable;
+    }
+}
+
+// -----------------------------
+//      驱动（Driver）接口
+// -----------------------------
+// 所有驱动插件必须实现并导出的核心接口。
+// 所有 ctx 使用 borrow<cancellable> 由host端管理生命周期
+interface exports {
+    use types.{cancellable, driver-props, form-field, capability, object, range-spec,output-stream, link-args, link-result, upload-request, driver-errors};
+
+    // --- 生命周期与元数据 ---
+    resource driver {
+        constructor();
+        // 获取驱动的属性，宿主在加载时调了解其固定行为。
+        get-properties:  func() -> driver-props;
+        // 获取驱动的用户可配置项元数据，用于动态生成设置表单。
+        get-form-meta:  func() -> list<form-field>;
+
+        // 初始化驱动实例。
+        init: func(ctx: borrow<cancellable>) -> result<_, driver-errors>;
+        // 销毁驱动实例
+        drop: func(ctx: borrow<cancellable>) -> result<_, driver-errors>;
+
+        // --- 核心文件操作 ---
+        // 所有可能耗时的 I/O 函数都接受一个可取消的上下文。
+        get-file: func(ctx: borrow<cancellable>, path: string) -> result<object, driver-errors>;
+        get-root: func(ctx: borrow<cancellable>) -> result<object, driver-errors>;
+        list-files: func(ctx: borrow<cancellable>,dir: object) -> result<list<object>, driver-errors>;
+        link-file: func(ctx: borrow<cancellable>, file: object, args: link-args) -> result<link-result, driver-errors>;
+        link-range: func(ctx: borrow<cancellable>, file: object, args: link-args, range: range-spec) -> result<_, driver-errors>;
+        make-dir: func(ctx: borrow<cancellable>, dir: object, name: string) -> result<option<object>, driver-errors>;
+        rename-file: func(ctx: borrow<cancellable>, file: object, new-name: string) -> result<option<object>, driver-errors>;
+        move-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>, driver-errors>;
+        remove-file: func(ctx: borrow<cancellable>, file: object) -> result<_, driver-errors>;
+        copy-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>, driver-errors>;
+        upload-file: func(ctx: borrow<cancellable>, dir: object, req: upload-request) -> result<option<object>, driver-errors>;
+    }
+}

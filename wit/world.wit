@@ -1,0 +1,27 @@
+package openlist:plugin-driver@0.1.0;
+
+interface host {
+   // 日志级别。
+   enum log-level { debug, info, warn, error }
+
+    // 导入由宿主（Host）实现的接口
+
+    // 由宿主处理的日志函数。
+    log: func(level: log-level, message: string);
+    // 从宿主获取插件的配置。JSON 类型
+    load-config: func(driver: u32) -> result<list<u8>, string>;
+    // 请求宿主保存插件的配置。JSON 类型
+    save-config: func(driver: u32, config: list<u8>) -> result<_, string>;
+   
+}
+
+world driver {
+    // 导入插件所需的标准 WASI 接口
+    import wasi:io/streams@0.2.7;
+    import wasi:io/poll@0.2.7;
+    import wasi:clocks/monotonic-clock@0.2.7;
+
+    import host;
+    // 导出插件（Guest）自身实现的驱动接口
+    export exports;
+}
