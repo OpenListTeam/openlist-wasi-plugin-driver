@@ -10,43 +10,56 @@ import (
 )
 
 type OutputStream struct {
-	inner    drivertypes.OutputStream
-	pollable poll.Pollable
+	inner       drivertypes.OutputStream
+	pollable    poll.Pollable
+	writeBuffer []byte // Reusable buffer for batch writes
+	bufferSize  int    // Current buffer usage
 }
 
 func NewOutputStream(inner drivertypes.OutputStream) OutputStream {
 	pollable := inner.Subscribe()
 	return OutputStream{
-		inner,
-		pollable,
+		inner:       inner,
+		pollable:    pollable,
+		writeBuffer: make([]byte, 0, 32768), // 32KB initial capacity
+		bufferSize:  0,
 	}
 }
 
 func (s *OutputStream) Write(p []byte) (int, error) {
-	// 等待资源可用
-	var checkSize2 uint64
-	for {
-		checkSize, err, iserr := s.inner.CheckWrite().Result()
-		if iserr {
-			switch err.Tag() {
-			case 0:
-				err := err.LastOperationFailed()
-				defer err.ResourceDrop()
-				return 0, errors.New(err.ToDebugString())
-			case 1:
-				return 0, io.EOF
+	totalWritten := 0
+	remaining := p
+
+	for len(remaining) > 0 {
+		// Check available space
+		var checkSize uint64
+		for {
+			size, err, iserr := s.inner.CheckWrite().Result()
+			if iserr {
+				switch err.Tag() {
+				case 0:
+					errDetail := err.LastOperationFailed()
+					defer errDetail.ResourceDrop()
+					return totalWritten, errors.New(errDetail.ToDebugString())
+				case 1:
+					return totalWritten, io.EOF
+				}
 			}
+			if size > 0 {
+				checkSize = size
+				break
+			}
+			s.pollable.Block()
 		}
-		s.pollable.Block()
-		if checkSize > 0 {
-			checkSize2 = checkSize
-			break
-		}
+
+		// Write in chunks
+		writeSize := min(checkSize, uint64(len(remaining)))
+		s.inner.Write(cm.ToList(remaining[:writeSize]))
+		totalWritten += int(writeSize)
+		remaining = remaining[writeSize:]
 	}
 
-	writeSize := min(checkSize2, uint64(len(p)))
-	s.inner.Write(cm.ToList(p[:writeSize]))
-	return int(writeSize), nil
+	return totalWritten, nil
 }
 
 func (s *OutputStream) Close() error {
@@ -69,22 +82,55 @@ func (s *OutputStream) Close() error {
 }
 
 type InputStream struct {
-	inner drivertypes.InputStream
+	inner      drivertypes.InputStream
+	readBuffer []byte // Reusable buffer for reads
+	bufPos     int    // Current position in buffer
+	bufLen     int    // Valid data length in buffer
 }
 
 func (s *InputStream) Read(p []byte) (int, error) {
-	data, err, iserr := s.inner.BlockingRead(uint64(min(len(p), 1<<19))).Result()
+	// If we have buffered data, use it first
+	if s.bufPos < s.bufLen {
+		n := copy(p, s.readBuffer[s.bufPos:s.bufLen])
+		s.bufPos += n
+		if s.bufPos >= s.bufLen {
+			s.bufPos = 0
+			s.bufLen = 0
+		}
+		return n, nil
+	}
+
+	// Read chunk size: larger of requested or 512KB for efficiency
+	readSize := uint64(max(len(p), 524288))
+	if readSize > 1<<20 { // Cap at 1MB
+		readSize = 1 << 20
+	}
+
+	data, err, iserr := s.inner.BlockingRead(readSize).Result()
 	if iserr {
 		switch err.Tag() {
 		case 0:
-			err := err.LastOperationFailed()
-			defer err.ResourceDrop()
-			return 0, errors.New(err.ToDebugString())
+			errDetail := err.LastOperationFailed()
+			defer errDetail.ResourceDrop()
+			return 0, errors.New(errDetail.ToDebugString())
 		case 1:
 			return 0, io.EOF
 		}
 	}
-	return copy(p, data.Slice()), nil
+
+	dataSlice := data.Slice()
+	n := copy(p, dataSlice)
+	
+	// Buffer remaining data if any
+	if n < len(dataSlice) {
+		if cap(s.readBuffer) < len(dataSlice)-n {
+			s.readBuffer = make([]byte, len(dataSlice)-n)
+		}
+		s.bufLen = copy(s.readBuffer, dataSlice[n:])
+		s.bufPos = 0
+	}
+
+	return n, nil
 }
 
 func (s *InputStream) Close() error {
@@ -93,7 +139,12 @@ func (s *InputStream) Close() error {
 }
 
 func NewInputStream(inner drivertypes.InputStream) InputStream {
-	return InputStream{inner}
+	return InputStream{
+		inner:      inner,
+		readBuffer: make([]byte, 0, 524288), // 512KB initial capacity
+		bufPos:     0,
+		bufLen:     0,
+	}
 }
 
 type UploadRequest struct {
@@ -117,7 +168,8 @@ func (us *UploadRequest) Streams() (io.ReadCloser, error) {
 	if iserr {
 		return nil, errors.New(err)
 	}
-	return &InputStream{inner: stream}, nil
+	is := NewInputStream(stream)
+	return &is, nil
 }
 
 func (us *UploadRequest) Peek(offset uint64, start uint64) (io.ReadCloser, error) {
@@ -125,7 +177,8 @@ func (us *UploadRequest) Peek(offset uint64, start uint64) (io.ReadCloser, error
 	if iserr {
 		return nil, errors.New(err)
 	}
-	return &InputStream{inner: stream}, nil
+	is := NewInputStream(stream)
+	return &is, nil
 }
 
 func (us *UploadRequest) Range(offset uint64, start uint64) (io.ReadCloser, error) {
@@ -133,5 +186,6 @@ func (us *UploadRequest) Range(offset uint64, start uint64) (io.ReadCloser, erro
 	if iserr {
 		return nil, errors.New(err)
 	}
-	return &InputStream{inner: stream}, nil
+	is := NewInputStream(stream)
+	return &is, nil
 }
