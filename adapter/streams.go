@@ -9,6 +9,21 @@ import (
 	"go.bytecodealliance.org/cm"
 )
 
+// Helper functions for min/max
+func min(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 type OutputStream struct {
 	inner       drivertypes.OutputStream
 	pollable    poll.Pollable
@@ -123,8 +138,11 @@ func (s *InputStream) Read(p []byte) (int, error) {
 	
 	// Buffer remaining data if any
 	if n < len(dataSlice) {
-		if cap(s.readBuffer) < len(dataSlice)-n {
-			s.readBuffer = make([]byte, len(dataSlice)-n)
+		remaining := len(dataSlice) - n
+		if cap(s.readBuffer) < remaining {
+			s.readBuffer = make([]byte, remaining)
+		} else {
+			s.readBuffer = s.readBuffer[:remaining]
 		}
 		s.bufLen = copy(s.readBuffer, dataSlice[n:])
 		s.bufPos = 0

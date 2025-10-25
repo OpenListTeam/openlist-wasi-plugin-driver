@@ -26,7 +26,6 @@ var copyBufferPool = sync.Pool{
 // It selects buffer size based on estimated data size and reuses buffers
 func BufferedCopy(dst io.Writer, src io.Reader, estimatedSize int64) (written int64, err error) {
 	var buf []byte
-	var pooled bool
 
 	// Select buffer size based on estimated transfer size
 	if estimatedSize > 0 && estimatedSize < SmallFileThreshold {
@@ -37,10 +36,7 @@ func BufferedCopy(dst io.Writer, src io.Reader, estimatedSize int64) (written in
 		// Use pooled buffer for large files
 		bufPtr := copyBufferPool.Get().(*[]byte)
 		buf = *bufPtr
-		pooled = true
-		defer func() {
-			copyBufferPool.Put(bufPtr)
-		}()
+		defer copyBufferPool.Put(bufPtr)
 	}
 
 	return io.CopyBuffer(dst, src, buf)
