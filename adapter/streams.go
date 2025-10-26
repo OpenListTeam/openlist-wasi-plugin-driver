@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"bufio"
 	"errors"
 	"io"
 
@@ -17,36 +18,45 @@ type OutputStream struct {
 func NewOutputStream(inner drivertypes.OutputStream) OutputStream {
 	pollable := inner.Subscribe()
 	return OutputStream{
-		inner,
-		pollable,
+		inner:    inner,
+		pollable: pollable,
 	}
 }
 
 func (s *OutputStream) Write(p []byte) (int, error) {
-	// 等待资源可用
-	var checkSize2 uint64
-	for {
-		checkSize, err, iserr := s.inner.CheckWrite().Result()
-		if iserr {
-			switch err.Tag() {
-			case 0:
-				err := err.LastOperationFailed()
-				defer err.ResourceDrop()
-				return 0, errors.New(err.ToDebugString())
-			case 1:
-				return 0, io.EOF
+	totalWritten := 0
+	remaining := p
+
+	for len(remaining) > 0 {
+		// Check available space
+		var checkSize uint64
+		for {
+			size, err, iserr := s.inner.CheckWrite().Result()
+			if iserr {
+				switch err.Tag() {
+				case 0:
+					errDetail := err.LastOperationFailed()
+					defer errDetail.ResourceDrop()
+					return totalWritten, errors.New(errDetail.ToDebugString())
+				case 1:
+					return totalWritten, io.EOF
+				}
 			}
+			if size > 0 {
+				checkSize = size
+				break
+			}
+			s.pollable.Block()
 		}
-		s.pollable.Block()
-		if checkSize > 0 {
-			checkSize2 = checkSize
-			break
-		}
+
+		// Write in chunks
+		writeSize := min(checkSize, uint64(len(remaining)))
+		s.inner.Write(cm.ToList(remaining[:writeSize]))
+		totalWritten += int(writeSize)
+		remaining = remaining[writeSize:]
 	}
 
-	writeSize := min(checkSize2, uint64(len(p)))
-	s.inner.Write(cm.ToList(p[:writeSize]))
-	return int(writeSize), nil
+	return totalWritten, nil
 }
 
 func (s *OutputStream) Close() error {
@@ -69,22 +79,12 @@ func (s *OutputStream) Close() error {
 }
 
 type InputStream struct {
-	inner drivertypes.InputStream
+	inner  drivertypes.InputStream
+	reader *bufio.Reader
 }
 
 func (s *InputStream) Read(p []byte) (int, error) {
-	data, err, iserr := s.inner.BlockingRead(uint64(min(len(p), 1<<19))).Result()
-	if iserr {
-		switch err.Tag() {
-		case 0:
-			err := err.LastOperationFailed()
-			defer err.ResourceDrop()
-			return 0, errors.New(err.ToDebugString())
-		case 1:
-			return 0, io.EOF
-		}
-	}
-	return copy(p, data.Slice()), nil
+	return s.reader.Read(p)
 }
 
 func (s *InputStream) Close() error {
@@ -92,8 +92,42 @@ func (s *InputStream) Close() error {
 	return nil
 }
 
+// baseInputStream wraps the WASI InputStream for use with bufio.Reader
+type baseInputStream struct {
+	inner drivertypes.InputStream
+}
+
+func (r *baseInputStream) Read(p []byte) (int, error) {
+	// Read with optimal chunk size
+	readSize := uint64(len(p))
+	if readSize < 64*1024 {
+		readSize = 64 * 1024 // Minimum 64KB reads
+	}
+	if readSize > 1<<20 {
+		readSize = 1 << 20 // Cap at 1MB
+	}
+
+	data, err, iserr := r.inner.BlockingRead(readSize).Result()
+	if iserr {
+		switch err.Tag() {
+		case 0:
+			errDetail := err.LastOperationFailed()
+			defer errDetail.ResourceDrop()
+			return 0, errors.New(errDetail.ToDebugString())
+		case 1:
+			return 0, io.EOF
+		}
+	}
+
+	return copy(p, data.Slice()), nil
+}
+
 func NewInputStream(inner drivertypes.InputStream) InputStream {
-	return InputStream{inner}
+	reader := &baseInputStream{inner: inner}
+	return InputStream{
+		inner:  inner,
+		reader: bufio.NewReaderSize(reader, 512*1024), // 512KB buffer
+	}
 }
 
 type UploadRequest struct {
@@ -117,7 +151,8 @@ func (us *UploadRequest) Streams() (io.ReadCloser, error) {
 	if iserr {
 		return nil, errors.New(err)
 	}
-	return &InputStream{inner: stream}, nil
+	is := NewInputStream(stream)
+	return &is, nil
 }
 
 func (us *UploadRequest) Peek(offset uint64, start uint64) (io.ReadCloser, error) {
@@ -125,7 +160,8 @@ func (us *UploadRequest) Peek(offset uint64, start uint64) (io.ReadCloser, error
 	if iserr {
 		return nil, errors.New(err)
 	}
-	return &InputStream{inner: stream}, nil
+	is := NewInputStream(stream)
+	return &is, nil
 }
 
 func (us *UploadRequest) Range(offset uint64, start uint64) (io.ReadCloser, error) {
@@ -133,5 +169,6 @@ func (us *UploadRequest) Range(offset uint64, start uint64) (io.ReadCloser, erro
 	if iserr {
 		return nil, errors.New(err)
 	}
-	return &InputStream{inner: stream}, nil
+	is := NewInputStream(stream)
+	return &is, nil
 }
