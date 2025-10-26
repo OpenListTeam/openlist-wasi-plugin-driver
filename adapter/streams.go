@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"bufio"
 	"errors"
 	"io"
 
@@ -9,35 +10,16 @@ import (
 	"go.bytecodealliance.org/cm"
 )
 
-// Helper functions for min/max
-func min(a, b uint64) uint64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 type OutputStream struct {
-	inner       drivertypes.OutputStream
-	pollable    poll.Pollable
-	writeBuffer []byte // Reusable buffer for batch writes
-	bufferSize  int    // Current buffer usage
+	inner    drivertypes.OutputStream
+	pollable poll.Pollable
 }
 
 func NewOutputStream(inner drivertypes.OutputStream) OutputStream {
 	pollable := inner.Subscribe()
 	return OutputStream{
-		inner:       inner,
-		pollable:    pollable,
-		writeBuffer: make([]byte, 0, 32768), // 32KB initial capacity
-		bufferSize:  0,
+		inner:    inner,
+		pollable: pollable,
 	}
 }
 
@@ -97,31 +79,35 @@ func (s *OutputStream) Close() error {
 }
 
 type InputStream struct {
-	inner      drivertypes.InputStream
-	readBuffer []byte // Reusable buffer for reads
-	bufPos     int    // Current position in buffer
-	bufLen     int    // Valid data length in buffer
+	inner  drivertypes.InputStream
+	reader *bufio.Reader
 }
 
 func (s *InputStream) Read(p []byte) (int, error) {
-	// If we have buffered data, use it first
-	if s.bufPos < s.bufLen {
-		n := copy(p, s.readBuffer[s.bufPos:s.bufLen])
-		s.bufPos += n
-		if s.bufPos >= s.bufLen {
-			s.bufPos = 0
-			s.bufLen = 0
-		}
-		return n, nil
+	return s.reader.Read(p)
+}
+
+func (s *InputStream) Close() error {
+	s.inner.ResourceDrop()
+	return nil
+}
+
+// baseInputStream wraps the WASI InputStream for use with bufio.Reader
+type baseInputStream struct {
+	inner drivertypes.InputStream
+}
+
+func (r *baseInputStream) Read(p []byte) (int, error) {
+	// Read with optimal chunk size
+	readSize := uint64(len(p))
+	if readSize < 64*1024 {
+		readSize = 64 * 1024 // Minimum 64KB reads
+	}
+	if readSize > 1<<20 {
+		readSize = 1 << 20 // Cap at 1MB
 	}
 
-	// Read chunk size: larger of requested or 512KB for efficiency
-	readSize := uint64(max(len(p), 524288))
-	if readSize > 1<<20 { // Cap at 1MB
-		readSize = 1 << 20
-	}
-
-	data, err, iserr := s.inner.BlockingRead(readSize).Result()
+	data, err, iserr := r.inner.BlockingRead(readSize).Result()
 	if iserr {
 		switch err.Tag() {
 		case 0:
@@ -133,35 +119,14 @@ func (s *InputStream) Read(p []byte) (int, error) {
 		}
 	}
 
-	dataSlice := data.Slice()
-	n := copy(p, dataSlice)
-	
-	// Buffer remaining data if any
-	if n < len(dataSlice) {
-		remaining := len(dataSlice) - n
-		if cap(s.readBuffer) < remaining {
-			s.readBuffer = make([]byte, remaining)
-		} else {
-			s.readBuffer = s.readBuffer[:remaining]
-		}
-		s.bufLen = copy(s.readBuffer, dataSlice[n:])
-		s.bufPos = 0
-	}
-
-	return n, nil
-}
-
-func (s *InputStream) Close() error {
-	s.inner.ResourceDrop()
-	return nil
+	return copy(p, data.Slice()), nil
 }
 
 func NewInputStream(inner drivertypes.InputStream) InputStream {
+	reader := &baseInputStream{inner: inner}
 	return InputStream{
-		inner:      inner,
-		readBuffer: make([]byte, 0, 524288), // 512KB initial capacity
-		bufPos:     0,
-		bufLen:     0,
+		inner:  inner,
+		reader: bufio.NewReaderSize(reader, 512*1024), // 512KB buffer
 	}
 }
 
