@@ -1,7 +1,6 @@
 package adapter
 
 import (
-	"bufio"
 	"errors"
 	"io"
 
@@ -24,12 +23,11 @@ func NewOutputStream(inner drivertypes.OutputStream) OutputStream {
 }
 
 func (s *OutputStream) Write(p []byte) (int, error) {
-	totalWritten := 0
-	remaining := p
+	total := len(p)
+	writeSize := total
 
-	for len(remaining) > 0 {
+	for writeSize > 0 {
 		// Check available space
-		var checkSize uint64
 		for {
 			size, err, iserr := s.inner.CheckWrite().Result()
 			if iserr {
@@ -37,26 +35,37 @@ func (s *OutputStream) Write(p []byte) (int, error) {
 				case 0:
 					errDetail := err.LastOperationFailed()
 					defer errDetail.ResourceDrop()
-					return totalWritten, errors.New(errDetail.ToDebugString())
+					return total - writeSize, errors.New(errDetail.ToDebugString())
 				case 1:
-					return totalWritten, io.EOF
+					return total - writeSize, io.EOF
 				}
 			}
 			if size > 0 {
-				checkSize = size
+				if size < uint64(writeSize) {
+					writeSize = int(size)
+				}
 				break
 			}
 			s.pollable.Block()
 		}
 
 		// Write in chunks
-		writeSize := min(checkSize, uint64(len(remaining)))
-		s.inner.Write(cm.ToList(remaining[:writeSize]))
-		totalWritten += int(writeSize)
-		remaining = remaining[writeSize:]
+		_, err, iserr := s.inner.Write(cm.ToList(p[:writeSize])).Result()
+		if iserr {
+			switch err.Tag() {
+			case 0:
+				errDetail := err.LastOperationFailed()
+				defer errDetail.ResourceDrop()
+				return total - writeSize, errors.New(errDetail.ToDebugString())
+			case 1:
+				return total - writeSize, io.EOF
+			}
+		}
+		p = p[writeSize:]
+		writeSize = len(p)
 	}
 
-	return totalWritten, nil
+	return total, nil
 }
 
 func (s *OutputStream) Close() error {
@@ -79,35 +88,11 @@ func (s *OutputStream) Close() error {
 }
 
 type InputStream struct {
-	inner  drivertypes.InputStream
-	reader *bufio.Reader
-}
-
-func (s *InputStream) Read(p []byte) (int, error) {
-	return s.reader.Read(p)
-}
-
-func (s *InputStream) Close() error {
-	s.inner.ResourceDrop()
-	return nil
-}
-
-// baseInputStream wraps the WASI InputStream for use with bufio.Reader
-type baseInputStream struct {
 	inner drivertypes.InputStream
 }
 
-func (r *baseInputStream) Read(p []byte) (int, error) {
-	// Read with optimal chunk size
-	readSize := uint64(len(p))
-	if readSize < 64*1024 {
-		readSize = 64 * 1024 // Minimum 64KB reads
-	}
-	if readSize > 1<<20 {
-		readSize = 1 << 20 // Cap at 1MB
-	}
-
-	data, err, iserr := r.inner.BlockingRead(readSize).Result()
+func (s *InputStream) Read(p []byte) (int, error) {
+	data, err, iserr := s.inner.BlockingRead(min(uint64(len(p)), 1<<20)).Result()
 	if iserr {
 		switch err.Tag() {
 		case 0:
@@ -122,11 +107,14 @@ func (r *baseInputStream) Read(p []byte) (int, error) {
 	return copy(p, data.Slice()), nil
 }
 
+func (s *InputStream) Close() error {
+	s.inner.ResourceDrop()
+	return nil
+}
+
 func NewInputStream(inner drivertypes.InputStream) InputStream {
-	reader := &baseInputStream{inner: inner}
 	return InputStream{
-		inner:  inner,
-		reader: bufio.NewReaderSize(reader, 512*1024), // 512KB buffer
+		inner: inner,
 	}
 }
 
