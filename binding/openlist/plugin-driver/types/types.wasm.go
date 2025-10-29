@@ -12,9 +12,21 @@ import (
 //go:noescape
 func wasmimport_ReadableResourceDrop(self0 uint32)
 
+//go:wasmimport openlist:plugin-driver/types@0.1.0 [method]readable.chunk-reset
+//go:noescape
+func wasmimport_ReadableChunkReset(self0 uint32, chunk0 uint32, result *cm.Result[string, struct{}, string])
+
+//go:wasmimport openlist:plugin-driver/types@0.1.0 [method]readable.chunks
+//go:noescape
+func wasmimport_ReadableChunks(self0 uint32, len0 uint32, result *cm.Result[string, uint32, string])
+
 //go:wasmimport openlist:plugin-driver/types@0.1.0 [method]readable.get-hasher
 //go:noescape
 func wasmimport_ReadableGetHasher(self0 uint32, hashs0 *HashAlg, hashs1 uint32, result *cm.Result[cm.List[HashInfo], cm.List[HashInfo], string])
+
+//go:wasmimport openlist:plugin-driver/types@0.1.0 [method]readable.next-chunk
+//go:noescape
+func wasmimport_ReadableNextChunk(self0 uint32, result *cm.Result[string, InputStream, string])
 
 //go:wasmimport openlist:plugin-driver/types@0.1.0 [method]readable.peek
 //go:noescape

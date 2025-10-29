@@ -143,11 +143,40 @@ func (us *UploadRequest) Streams() (io.ReadCloser, error) {
 	return &is, nil
 }
 
-func (us *UploadRequest) Peek(offset uint64, start uint64) (io.ReadCloser, error) {
-	stream, err, iserr := us.Content.Peek(offset, start).Result()
+func (us *UploadRequest) Peek(offset uint64, length uint64) (io.ReadCloser, error) {
+	stream, err, iserr := us.Content.Peek(offset, length).Result()
 	if iserr {
 		return nil, errors.New(err)
 	}
 	is := NewInputStream(stream)
 	return &is, nil
+}
+
+func (us *UploadRequest) Chunks(chunkSize uint32) (chunkCount uint32, e error) {
+	count, err, iserr := us.Content.Chunks(chunkSize).Result()
+	if iserr {
+		return 0, errors.New(err)
+	}
+	return count, nil
+}
+
+func (us *UploadRequest) NextChunk() (io.ReadCloser, error) {
+	stream, err, iserr := us.Content.NextChunk().Result()
+	if iserr {
+		return nil, errors.New(err)
+	}
+	is := NewInputStream(stream)
+	return &is, nil
+}
+
+func (us *UploadRequest) ChunkReset(chunk io.ReadCloser) error {
+	is, ok := chunk.(*InputStream)
+	if !ok {
+		return errors.New("invalid chunk type")
+	}
+	_, err, iserr := us.Content.ChunkReset(is.inner).Result()
+	if iserr {
+		return errors.New(err)
+	}
+	return nil
 }

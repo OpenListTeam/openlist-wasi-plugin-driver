@@ -36,6 +36,11 @@ interface types {
         // 当读取的边界超过内部设置大小后会缓存整个流
         // 流未缓存时线程不完全
         peek: func(offset: u64, len: u64) -> result<input-stream, string>;
+        // 设置分块读取，返回块数量
+        chunks: func(len: u32) -> result<u32, string>;
+        // 获取下一个块，配合chunk-reset可重复读取
+        next-chunk: func() -> result<input-stream, string>;
+        chunk-reset: func(chunk: input-stream) -> result<_, string>;
         // 获取或计算文件的hash，会缓存整个文件
         // 流未缓存时线程不完全
         get-hasher: func(hashs: list<hash-alg>) -> result<list<hash-info>, string>;

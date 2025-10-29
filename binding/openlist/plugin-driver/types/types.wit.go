@@ -188,6 +188,32 @@ func (self Readable) ResourceDrop() {
 	return
 }
 
+// ChunkReset represents the imported method "chunk-reset".
+//
+//	chunk-reset: func(chunk: input-stream) -> result<_, string>
+//
+//go:nosplit
+func (self Readable) ChunkReset(chunk InputStream) (result cm.Result[string, struct{}, string]) {
+	self0 := cm.Reinterpret[uint32](self)
+	chunk0 := cm.Reinterpret[uint32](chunk)
+	wasmimport_ReadableChunkReset((uint32)(self0), (uint32)(chunk0), &result)
+	return
+}
+
+// Chunks represents the imported method "chunks".
+//
+// 设置分块读取，返回块数量
+//
+//	chunks: func(len: u32) -> result<u32, string>
+//
+//go:nosplit
+func (self Readable) Chunks(len_ uint32) (result cm.Result[string, uint32, string]) {
+	self0 := cm.Reinterpret[uint32](self)
+	len0 := (uint32)(len_)
+	wasmimport_ReadableChunks((uint32)(self0), (uint32)(len0), &result)
+	return
+}
+
 // GetHasher represents the imported method "get-hasher".
 //
 // 获取或计算文件的hash，会缓存整个文件
@@ -200,6 +226,19 @@ func (self Readable) GetHasher(hashs cm.List[HashAlg]) (result cm.Result[cm.List
 	self0 := cm.Reinterpret[uint32](self)
 	hashs0, hashs1 := cm.LowerList(hashs)
 	wasmimport_ReadableGetHasher((uint32)(self0), (*HashAlg)(hashs0), (uint32)(hashs1), &result)
+	return
+}
+
+// NextChunk represents the imported method "next-chunk".
+//
+// 获取下一个块，配合chunk-reset可重复读取
+//
+//	next-chunk: func() -> result<input-stream, string>
+//
+//go:nosplit
+func (self Readable) NextChunk() (result cm.Result[string, InputStream, string]) {
+	self0 := cm.Reinterpret[uint32](self)
+	wasmimport_ReadableNextChunk((uint32)(self0), &result)
 	return
 }
 
