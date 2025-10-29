@@ -191,6 +191,7 @@ func (self Readable) ResourceDrop() {
 // GetHasher represents the imported method "get-hasher".
 //
 // 获取或计算文件的hash，会缓存整个文件
+// 流未缓存时线程不完全
 //
 //	get-hasher: func(hashs: list<hash-alg>) -> result<list<hash-info>, string>
 //
@@ -204,10 +205,9 @@ func (self Readable) GetHasher(hashs cm.List[HashAlg]) (result cm.Result[cm.List
 
 // Peek represents the imported method "peek".
 //
-// 从文件的指定偏移量读取一块数据,并且不消耗流。
-// 当读取总量超过内部设置大小后会缓存整个文件
-// stream-peek只能存在一个实例，
-// 与stream-range互斥，必须销毁后才能调用stream-range
+// 从流读取指定偏移量的一块数据,并且不消耗流。
+// 当读取的边界超过内部设置大小后会缓存整个流
+// 流未缓存时线程不完全
 //
 //	peek: func(offset: u64, len: u64) -> result<input-stream, string>
 //
@@ -220,26 +220,9 @@ func (self Readable) Peek(offset uint64, len_ uint64) (result cm.Result[string, 
 	return
 }
 
-// Range represents the imported method "range".
-//
-// 缓存整个文件
-// stream-range 允许存在多个实例
-// 为了减少复杂性，调用后stream-peek将永远返回错误
-//
-//	range: func(offset: u64, len: u64) -> result<input-stream, string>
-//
-//go:nosplit
-func (self Readable) Range(offset uint64, len_ uint64) (result cm.Result[string, InputStream, string]) {
-	self0 := cm.Reinterpret[uint32](self)
-	offset0 := (uint64)(offset)
-	len0 := (uint64)(len_)
-	wasmimport_ReadableRange((uint32)(self0), (uint64)(offset0), (uint64)(len0), &result)
-	return
-}
-
 // Streams represents the imported method "streams".
 //
-// 只允许调用一次，会消耗底层的reader导致stream-range无法调用
+// 只允许调用一次，会消耗底层的reader导致stream-peek无法调用
 // 适合支持流上传，并且不需要预算hash的情况
 //
 //	streams: func() -> result<input-stream, string>

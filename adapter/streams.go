@@ -151,12 +151,3 @@ func (us *UploadRequest) Peek(offset uint64, start uint64) (io.ReadCloser, error
 	is := NewInputStream(stream)
 	return &is, nil
 }
-
-func (us *UploadRequest) Range(offset uint64, start uint64) (io.ReadCloser, error) {
-	stream, err, iserr := us.Content.Range(offset, start).Result()
-	if iserr {
-		return nil, errors.New(err)
-	}
-	is := NewInputStream(stream)
-	return &is, nil
-}

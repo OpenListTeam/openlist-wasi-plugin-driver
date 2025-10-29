@@ -20,10 +20,6 @@ func wasmimport_ReadableGetHasher(self0 uint32, hashs0 *HashAlg, hashs1 uint32, 
 //go:noescape
 func wasmimport_ReadablePeek(self0 uint32, offset0 uint64, len0 uint64, result *cm.Result[string, InputStream, string])
 
-//go:wasmimport openlist:plugin-driver/types@0.1.0 [method]readable.range
-//go:noescape
-func wasmimport_ReadableRange(self0 uint32, offset0 uint64, len0 uint64, result *cm.Result[string, InputStream, string])
-
 //go:wasmimport openlist:plugin-driver/types@0.1.0 [method]readable.streams
 //go:noescape
 func wasmimport_ReadableStreams(self0 uint32, result *cm.Result[string, InputStream, string])
