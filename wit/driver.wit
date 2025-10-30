@@ -139,7 +139,7 @@ interface types {
     }
 
     // 定义文件的字节范围。
-    record range-spec { offset: u64, size: option<u64>, %stream: borrow<output-stream> }
+    record range-spec { offset: u64, size: u64, %stream: borrow<output-stream> }
 
     record link-args { 
         ip: string,

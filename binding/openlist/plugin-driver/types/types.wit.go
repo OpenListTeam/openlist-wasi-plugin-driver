@@ -472,14 +472,14 @@ type DriverProps struct {
 //
 //	record range-spec {
 //		offset: u64,
-//		size: option<u64>,
+//		size: u64,
 //		%stream: borrow<output-stream>,
 //	}
 type RangeSpec struct {
-	_      cm.HostLayout     `json:"-"`
-	Offset uint64            `json:"offset"`
-	Size   cm.Option[uint64] `json:"size"`
-	Stream OutputStream      `json:"stream"`
+	_      cm.HostLayout `json:"-"`
+	Offset uint64        `json:"offset"`
+	Size   uint64        `json:"size"`
+	Stream OutputStream  `json:"stream"`
 }
 
 // LinkArgs represents the imported record "openlist:plugin-driver/types@0.1.0#link-args".
