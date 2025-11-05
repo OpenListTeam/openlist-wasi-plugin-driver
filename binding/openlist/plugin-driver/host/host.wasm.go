@@ -14,8 +14,8 @@ func wasmimport_Log(level0 uint32, message0 *uint8, message1 uint32)
 
 //go:wasmimport openlist:plugin-driver/host@0.1.0 load-config
 //go:noescape
-func wasmimport_LoadConfig(driver0 uint32, result *cm.Result[cm.List[uint8], cm.List[uint8], string])
+func wasmimport_LoadConfig(handle0 uint32, result *cm.Result[cm.List[uint8], cm.List[uint8], string])
 
 //go:wasmimport openlist:plugin-driver/host@0.1.0 save-config
 //go:noescape
-func wasmimport_SaveConfig(driver0 uint32, config0 *uint8, config1 uint32, result *cm.Result[string, struct{}, string])
+func wasmimport_SaveConfig(handle0 uint32, config0 *uint8, config1 uint32, result *cm.Result[string, struct{}, string])

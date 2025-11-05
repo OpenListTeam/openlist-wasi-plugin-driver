@@ -7,16 +7,16 @@ import (
 	"unsafe"
 )
 
-// OptionObjectShape is used for storage in variant or result types.
-type OptionObjectShape struct {
-	_     cm.HostLayout
-	shape [unsafe.Sizeof(cm.Option[Object]{})]byte
-}
-
 // ObjectShape is used for storage in variant or result types.
 type ObjectShape struct {
 	_     cm.HostLayout
 	shape [unsafe.Sizeof(Object{})]byte
+}
+
+// DriverErrorsShape is used for storage in variant or result types.
+type DriverErrorsShape struct {
+	_     cm.HostLayout
+	shape [unsafe.Sizeof(DriverErrors{})]byte
 }
 
 // LinkResultShape is used for storage in variant or result types.
@@ -25,8 +25,8 @@ type LinkResultShape struct {
 	shape [unsafe.Sizeof(LinkResult{})]byte
 }
 
-// DriverErrorsShape is used for storage in variant or result types.
-type DriverErrorsShape struct {
+// OptionObjectShape is used for storage in variant or result types.
+type OptionObjectShape struct {
 	_     cm.HostLayout
-	shape [unsafe.Sizeof(DriverErrors{})]byte
+	shape [unsafe.Sizeof(cm.Option[Object]{})]byte
 }

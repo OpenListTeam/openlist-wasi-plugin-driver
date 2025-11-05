@@ -69,137 +69,82 @@ type UploadRequest = types.UploadRequest
 // See [types.DriverErrors] for more information.
 type DriverErrors = types.DriverErrors
 
-// Driver represents the exported resource "openlist:plugin-driver/exports@0.1.0#driver".
-//
-// --- 生命周期与元数据 ---
-//
-//	resource driver
-type Driver cm.Resource
-
-// DriverResourceNew represents the imported resource-new for resource "driver".
-//
-// Creates a new resource handle.
-//
-//go:nosplit
-func DriverResourceNew(rep cm.Rep) (result Driver) {
-	rep0 := cm.Reinterpret[uint32](rep)
-	result0 := wasmimport_DriverResourceNew((uint32)(rep0))
-	result = cm.Reinterpret[Driver]((uint32)(result0))
-	return
-}
-
-// ResourceRep represents the imported resource-rep for resource "driver".
-//
-// Returns the underlying resource representation.
-//
-//go:nosplit
-func (self Driver) ResourceRep() (result cm.Rep) {
-	self0 := cm.Reinterpret[uint32](self)
-	result0 := wasmimport_DriverResourceRep((uint32)(self0))
-	result = cm.Reinterpret[cm.Rep]((uint32)(result0))
-	return
-}
-
-// ResourceDrop represents the imported resource-drop for resource "driver".
-//
-// Drops a resource handle.
-//
-//go:nosplit
-func (self Driver) ResourceDrop() {
-	self0 := cm.Reinterpret[uint32](self)
-	wasmimport_DriverResourceDrop((uint32)(self0))
-	return
-}
-
-func init() {
-	Exports.Driver.Destructor = func(self cm.Rep) {}
-}
-
-// wasmexport_DriverCopyFile_params represents the flattened function params for [wasmexport_DriverCopyFile].
+// wasmexport_ListFiles_params represents the flattened function params for [wasmexport_ListFiles].
 // See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverCopyFile_params struct {
-	_     cm.HostLayout `json:"-"`
-	self  cm.Rep        `json:"self"`
-	ctx   cm.Rep        `json:"ctx"`
-	file  Object        `json:"file"`
-	toDir Object        `json:"to-dir"`
+type wasmexport_ListFiles_params struct {
+	_   cm.HostLayout `json:"-"`
+	ctx cm.Rep        `json:"ctx"`
+	dir Object        `json:"dir"`
 }
 
-// wasmexport_DriverLinkFile_params represents the flattened function params for [wasmexport_DriverLinkFile].
+// wasmexport_LinkFile_params represents the flattened function params for [wasmexport_LinkFile].
 // See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverLinkFile_params struct {
+type wasmexport_LinkFile_params struct {
 	_    cm.HostLayout `json:"-"`
-	self cm.Rep        `json:"self"`
 	ctx  cm.Rep        `json:"ctx"`
 	file Object        `json:"file"`
 	args LinkArgs      `json:"args"`
 }
 
-// wasmexport_DriverLinkRange_params represents the flattened function params for [wasmexport_DriverLinkRange].
+// wasmexport_LinkRange_params represents the flattened function params for [wasmexport_LinkRange].
 // See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverLinkRange_params struct {
+type wasmexport_LinkRange_params struct {
 	_      cm.HostLayout `json:"-"`
-	self   cm.Rep        `json:"self"`
 	ctx    cm.Rep        `json:"ctx"`
 	file   Object        `json:"file"`
 	args   LinkArgs      `json:"args"`
 	range_ RangeSpec     `json:"range"`
 }
 
-// wasmexport_DriverListFiles_params represents the flattened function params for [wasmexport_DriverListFiles].
+// wasmexport_MakeDir_params represents the flattened function params for [wasmexport_MakeDir].
 // See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverListFiles_params struct {
+type wasmexport_MakeDir_params struct {
 	_    cm.HostLayout `json:"-"`
-	self cm.Rep        `json:"self"`
-	ctx  cm.Rep        `json:"ctx"`
-	dir  Object        `json:"dir"`
-}
-
-// wasmexport_DriverMakeDir_params represents the flattened function params for [wasmexport_DriverMakeDir].
-// See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverMakeDir_params struct {
-	_    cm.HostLayout `json:"-"`
-	self cm.Rep        `json:"self"`
 	ctx  cm.Rep        `json:"ctx"`
 	dir  Object        `json:"dir"`
 	name string        `json:"name"`
 }
 
-// wasmexport_DriverMoveFile_params represents the flattened function params for [wasmexport_DriverMoveFile].
+// wasmexport_RenameFile_params represents the flattened function params for [wasmexport_RenameFile].
 // See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverMoveFile_params struct {
-	_     cm.HostLayout `json:"-"`
-	self  cm.Rep        `json:"self"`
-	ctx   cm.Rep        `json:"ctx"`
-	file  Object        `json:"file"`
-	toDir Object        `json:"to-dir"`
-}
-
-// wasmexport_DriverRemoveFile_params represents the flattened function params for [wasmexport_DriverRemoveFile].
-// See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverRemoveFile_params struct {
-	_    cm.HostLayout `json:"-"`
-	self cm.Rep        `json:"self"`
-	ctx  cm.Rep        `json:"ctx"`
-	file Object        `json:"file"`
-}
-
-// wasmexport_DriverRenameFile_params represents the flattened function params for [wasmexport_DriverRenameFile].
-// See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverRenameFile_params struct {
+type wasmexport_RenameFile_params struct {
 	_       cm.HostLayout `json:"-"`
-	self    cm.Rep        `json:"self"`
 	ctx     cm.Rep        `json:"ctx"`
 	file    Object        `json:"file"`
 	newName string        `json:"new-name"`
 }
 
-// wasmexport_DriverUploadFile_params represents the flattened function params for [wasmexport_DriverUploadFile].
+// wasmexport_MoveFile_params represents the flattened function params for [wasmexport_MoveFile].
 // See the Canonical ABI flattening rules for more information.
-type wasmexport_DriverUploadFile_params struct {
+type wasmexport_MoveFile_params struct {
+	_     cm.HostLayout `json:"-"`
+	ctx   cm.Rep        `json:"ctx"`
+	file  Object        `json:"file"`
+	toDir Object        `json:"to-dir"`
+}
+
+// wasmexport_RemoveFile_params represents the flattened function params for [wasmexport_RemoveFile].
+// See the Canonical ABI flattening rules for more information.
+type wasmexport_RemoveFile_params struct {
 	_    cm.HostLayout `json:"-"`
-	self cm.Rep        `json:"self"`
 	ctx  cm.Rep        `json:"ctx"`
-	dir  Object        `json:"dir"`
-	req  UploadRequest `json:"req"`
+	file Object        `json:"file"`
+}
+
+// wasmexport_CopyFile_params represents the flattened function params for [wasmexport_CopyFile].
+// See the Canonical ABI flattening rules for more information.
+type wasmexport_CopyFile_params struct {
+	_     cm.HostLayout `json:"-"`
+	ctx   cm.Rep        `json:"ctx"`
+	file  Object        `json:"file"`
+	toDir Object        `json:"to-dir"`
+}
+
+// wasmexport_UploadFile_params represents the flattened function params for [wasmexport_UploadFile].
+// See the Canonical ABI flattening rules for more information.
+type wasmexport_UploadFile_params struct {
+	_   cm.HostLayout `json:"-"`
+	ctx cm.Rep        `json:"ctx"`
+	dir Object        `json:"dir"`
+	req UploadRequest `json:"req"`
 }

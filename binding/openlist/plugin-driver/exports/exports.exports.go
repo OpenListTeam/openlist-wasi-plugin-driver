@@ -8,110 +8,103 @@ import (
 
 // Exports represents the caller-defined exports from "openlist:plugin-driver/exports@0.1.0".
 var Exports struct {
-	// Driver represents the caller-defined exports for resource "openlist:plugin-driver/exports@0.1.0#driver".
-	Driver struct {
-		// Destructor represents the caller-defined, exported destructor for resource "driver".
-		//
-		// Resource destructor.
-		Destructor func(self cm.Rep)
+	// SetHandle represents the caller-defined, exported function "set-handle".
+	//
+	//	set-handle: func(handle: u32)
+	SetHandle func(handle uint32)
 
-		// Constructor represents the caller-defined, exported constructor for resource "driver".
-		//
-		//	constructor()
-		Constructor func() (result Driver)
+	// GetProperties represents the caller-defined, exported function "get-properties".
+	//
+	// --- 生命周期与元数据 ---
+	// 获取驱动的属性，宿主在加载时调了解其固定行为。
+	//
+	//	get-properties: func() -> driver-props
+	GetProperties func() (result DriverProps)
 
-		// CopyFile represents the caller-defined, exported method "copy-file".
-		//
-		//	copy-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>,
-		//	driver-errors>
-		CopyFile func(self cm.Rep, ctx cm.Rep, file Object, toDir Object) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
+	// GetFormMeta represents the caller-defined, exported function "get-form-meta".
+	//
+	// 获取驱动的用户可配置项元数据，用于动态生成设置表单。
+	//
+	//	get-form-meta: func() -> list<form-field>
+	GetFormMeta func() (result cm.List[FormField])
 
-		// Drop represents the caller-defined, exported method "drop".
-		//
-		// 销毁驱动实例
-		//
-		//	drop: func(ctx: borrow<cancellable>) -> result<_, driver-errors>
-		Drop func(self cm.Rep, ctx cm.Rep) (result cm.Result[DriverErrors, struct{}, DriverErrors])
+	// Init represents the caller-defined, exported function "init".
+	//
+	// 初始化驱动实例。
+	//
+	//	init: func(ctx: borrow<cancellable>) -> result<_, driver-errors>
+	Init func(ctx cm.Rep) (result cm.Result[DriverErrors, struct{}, DriverErrors])
 
-		// GetFile represents the caller-defined, exported method "get-file".
-		//
-		// --- 核心文件操作 ---
-		// 所有可能耗时的 I/O 函数都接受一个可取消的上下文。
-		//
-		//	get-file: func(ctx: borrow<cancellable>, path: string) -> result<object, driver-errors>
-		GetFile func(self cm.Rep, ctx cm.Rep, path string) (result cm.Result[ObjectShape, Object, DriverErrors])
+	// Drop represents the caller-defined, exported function "drop".
+	//
+	// 销毁驱动实例
+	//
+	//	drop: func(ctx: borrow<cancellable>) -> result<_, driver-errors>
+	Drop func(ctx cm.Rep) (result cm.Result[DriverErrors, struct{}, DriverErrors])
 
-		// GetFormMeta represents the caller-defined, exported method "get-form-meta".
-		//
-		// 获取驱动的用户可配置项元数据，用于动态生成设置表单。
-		//
-		//	get-form-meta: func() -> list<form-field>
-		GetFormMeta func(self cm.Rep) (result cm.List[FormField])
+	// GetFile represents the caller-defined, exported function "get-file".
+	//
+	// --- 核心文件操作 ---
+	// 所有可能耗时的 I/O 函数都接受一个可取消的上下文。
+	//
+	//	get-file: func(ctx: borrow<cancellable>, path: string) -> result<object, driver-errors>
+	GetFile func(ctx cm.Rep, path string) (result cm.Result[ObjectShape, Object, DriverErrors])
 
-		// GetProperties represents the caller-defined, exported method "get-properties".
-		//
-		// 获取驱动的属性，宿主在加载时调了解其固定行为。
-		//
-		//	get-properties: func() -> driver-props
-		GetProperties func(self cm.Rep) (result DriverProps)
+	// GetRoot represents the caller-defined, exported function "get-root".
+	//
+	//	get-root: func(ctx: borrow<cancellable>) -> result<object, driver-errors>
+	GetRoot func(ctx cm.Rep) (result cm.Result[ObjectShape, Object, DriverErrors])
 
-		// GetRoot represents the caller-defined, exported method "get-root".
-		//
-		//	get-root: func(ctx: borrow<cancellable>) -> result<object, driver-errors>
-		GetRoot func(self cm.Rep, ctx cm.Rep) (result cm.Result[ObjectShape, Object, DriverErrors])
+	// ListFiles represents the caller-defined, exported function "list-files".
+	//
+	//	list-files: func(ctx: borrow<cancellable>, dir: object) -> result<list<object>,
+	//	driver-errors>
+	ListFiles func(ctx cm.Rep, dir Object) (result cm.Result[DriverErrorsShape, cm.List[Object], DriverErrors])
 
-		// Init represents the caller-defined, exported method "init".
-		//
-		// 初始化驱动实例。
-		//
-		//	init: func(ctx: borrow<cancellable>) -> result<_, driver-errors>
-		Init func(self cm.Rep, ctx cm.Rep) (result cm.Result[DriverErrors, struct{}, DriverErrors])
+	// LinkFile represents the caller-defined, exported function "link-file".
+	//
+	//	link-file: func(ctx: borrow<cancellable>, file: object, args: link-args) -> result<link-result,
+	//	driver-errors>
+	LinkFile func(ctx cm.Rep, file Object, args LinkArgs) (result cm.Result[LinkResultShape, LinkResult, DriverErrors])
 
-		// LinkFile represents the caller-defined, exported method "link-file".
-		//
-		//	link-file: func(ctx: borrow<cancellable>, file: object, args: link-args) -> result<link-result,
-		//	driver-errors>
-		LinkFile func(self cm.Rep, ctx cm.Rep, file Object, args LinkArgs) (result cm.Result[LinkResultShape, LinkResult, DriverErrors])
+	// LinkRange represents the caller-defined, exported function "link-range".
+	//
+	//	link-range: func(ctx: borrow<cancellable>, file: object, args: link-args, range:
+	//	range-spec) -> result<_, driver-errors>
+	LinkRange func(ctx cm.Rep, file Object, args LinkArgs, range_ RangeSpec) (result cm.Result[DriverErrors, struct{}, DriverErrors])
 
-		// LinkRange represents the caller-defined, exported method "link-range".
-		//
-		//	link-range: func(ctx: borrow<cancellable>, file: object, args: link-args, range:
-		//	range-spec) -> result<_, driver-errors>
-		LinkRange func(self cm.Rep, ctx cm.Rep, file Object, args LinkArgs, range_ RangeSpec) (result cm.Result[DriverErrors, struct{}, DriverErrors])
+	// MakeDir represents the caller-defined, exported function "make-dir".
+	//
+	//	make-dir: func(ctx: borrow<cancellable>, dir: object, name: string) -> result<option<object>,
+	//	driver-errors>
+	MakeDir func(ctx cm.Rep, dir Object, name string) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
 
-		// ListFiles represents the caller-defined, exported method "list-files".
-		//
-		//	list-files: func(ctx: borrow<cancellable>, dir: object) -> result<list<object>,
-		//	driver-errors>
-		ListFiles func(self cm.Rep, ctx cm.Rep, dir Object) (result cm.Result[DriverErrorsShape, cm.List[Object], DriverErrors])
+	// RenameFile represents the caller-defined, exported function "rename-file".
+	//
+	//	rename-file: func(ctx: borrow<cancellable>, file: object, new-name: string) ->
+	//	result<option<object>, driver-errors>
+	RenameFile func(ctx cm.Rep, file Object, newName string) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
 
-		// MakeDir represents the caller-defined, exported method "make-dir".
-		//
-		//	make-dir: func(ctx: borrow<cancellable>, dir: object, name: string) -> result<option<object>,
-		//	driver-errors>
-		MakeDir func(self cm.Rep, ctx cm.Rep, dir Object, name string) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
+	// MoveFile represents the caller-defined, exported function "move-file".
+	//
+	//	move-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>,
+	//	driver-errors>
+	MoveFile func(ctx cm.Rep, file Object, toDir Object) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
 
-		// MoveFile represents the caller-defined, exported method "move-file".
-		//
-		//	move-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>,
-		//	driver-errors>
-		MoveFile func(self cm.Rep, ctx cm.Rep, file Object, toDir Object) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
+	// RemoveFile represents the caller-defined, exported function "remove-file".
+	//
+	//	remove-file: func(ctx: borrow<cancellable>, file: object) -> result<_, driver-errors>
+	RemoveFile func(ctx cm.Rep, file Object) (result cm.Result[DriverErrors, struct{}, DriverErrors])
 
-		// RemoveFile represents the caller-defined, exported method "remove-file".
-		//
-		//	remove-file: func(ctx: borrow<cancellable>, file: object) -> result<_, driver-errors>
-		RemoveFile func(self cm.Rep, ctx cm.Rep, file Object) (result cm.Result[DriverErrors, struct{}, DriverErrors])
+	// CopyFile represents the caller-defined, exported function "copy-file".
+	//
+	//	copy-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>,
+	//	driver-errors>
+	CopyFile func(ctx cm.Rep, file Object, toDir Object) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
 
-		// RenameFile represents the caller-defined, exported method "rename-file".
-		//
-		//	rename-file: func(ctx: borrow<cancellable>, file: object, new-name: string) ->
-		//	result<option<object>, driver-errors>
-		RenameFile func(self cm.Rep, ctx cm.Rep, file Object, newName string) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
-
-		// UploadFile represents the caller-defined, exported method "upload-file".
-		//
-		//	upload-file: func(ctx: borrow<cancellable>, dir: object, req: upload-request) ->
-		//	result<option<object>, driver-errors>
-		UploadFile func(self cm.Rep, ctx cm.Rep, dir Object, req UploadRequest) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
-	}
+	// UploadFile represents the caller-defined, exported function "upload-file".
+	//
+	//	upload-file: func(ctx: borrow<cancellable>, dir: object, req: upload-request) ->
+	//	result<option<object>, driver-errors>
+	UploadFile func(ctx cm.Rep, dir Object, req UploadRequest) (result cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors])
 }

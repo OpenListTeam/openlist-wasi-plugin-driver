@@ -70,12 +70,12 @@ func Log(level LogLevel, message string) {
 //
 // 从宿主获取插件的配置。JSON 类型
 //
-//	load-config: func(driver: u32) -> result<list<u8>, string>
+//	load-config: func(handle: u32) -> result<list<u8>, string>
 //
 //go:nosplit
-func LoadConfig(driver uint32) (result cm.Result[cm.List[uint8], cm.List[uint8], string]) {
-	driver0 := (uint32)(driver)
-	wasmimport_LoadConfig((uint32)(driver0), &result)
+func LoadConfig(handle uint32) (result cm.Result[cm.List[uint8], cm.List[uint8], string]) {
+	handle0 := (uint32)(handle)
+	wasmimport_LoadConfig((uint32)(handle0), &result)
 	return
 }
 
@@ -83,12 +83,12 @@ func LoadConfig(driver uint32) (result cm.Result[cm.List[uint8], cm.List[uint8],
 //
 // 请求宿主保存插件的配置。JSON 类型
 //
-//	save-config: func(driver: u32, config: list<u8>) -> result<_, string>
+//	save-config: func(handle: u32, config: list<u8>) -> result<_, string>
 //
 //go:nosplit
-func SaveConfig(driver uint32, config cm.List[uint8]) (result cm.Result[string, struct{}, string]) {
-	driver0 := (uint32)(driver)
+func SaveConfig(handle uint32, config cm.List[uint8]) (result cm.Result[string, struct{}, string]) {
+	handle0 := (uint32)(handle)
 	config0, config1 := cm.LowerList(config)
-	wasmimport_SaveConfig((uint32)(driver0), (*uint8)(config0), (uint32)(config1), &result)
+	wasmimport_SaveConfig((uint32)(handle0), (*uint8)(config0), (uint32)(config1), &result)
 	return
 }

@@ -182,31 +182,30 @@ interface types {
 interface exports {
     use types.{cancellable, driver-props, form-field, capability, object, range-spec,output-stream, link-args, link-result, upload-request, driver-errors};
 
+    set-handle: func(handle: u32);
+    
     // --- 生命周期与元数据 ---
-    resource driver {
-        constructor();
-        // 获取驱动的属性，宿主在加载时调了解其固定行为。
-        get-properties:  func() -> driver-props;
-        // 获取驱动的用户可配置项元数据，用于动态生成设置表单。
-        get-form-meta:  func() -> list<form-field>;
+    // 获取驱动的属性，宿主在加载时调了解其固定行为。
+    get-properties:  func() -> driver-props;
+    // 获取驱动的用户可配置项元数据，用于动态生成设置表单。
+    get-form-meta:  func() -> list<form-field>;
 
-        // 初始化驱动实例。
-        init: func(ctx: borrow<cancellable>) -> result<_, driver-errors>;
-        // 销毁驱动实例
-        drop: func(ctx: borrow<cancellable>) -> result<_, driver-errors>;
+    // 初始化驱动实例。
+    init: func(ctx: borrow<cancellable>) -> result<_, driver-errors>;
+    // 销毁驱动实例
+    drop: func(ctx: borrow<cancellable>) -> result<_, driver-errors>;
 
-        // --- 核心文件操作 ---
-        // 所有可能耗时的 I/O 函数都接受一个可取消的上下文。
-        get-file: func(ctx: borrow<cancellable>, path: string) -> result<object, driver-errors>;
-        get-root: func(ctx: borrow<cancellable>) -> result<object, driver-errors>;
-        list-files: func(ctx: borrow<cancellable>,dir: object) -> result<list<object>, driver-errors>;
-        link-file: func(ctx: borrow<cancellable>, file: object, args: link-args) -> result<link-result, driver-errors>;
-        link-range: func(ctx: borrow<cancellable>, file: object, args: link-args, range: range-spec) -> result<_, driver-errors>;
-        make-dir: func(ctx: borrow<cancellable>, dir: object, name: string) -> result<option<object>, driver-errors>;
-        rename-file: func(ctx: borrow<cancellable>, file: object, new-name: string) -> result<option<object>, driver-errors>;
-        move-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>, driver-errors>;
-        remove-file: func(ctx: borrow<cancellable>, file: object) -> result<_, driver-errors>;
-        copy-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>, driver-errors>;
-        upload-file: func(ctx: borrow<cancellable>, dir: object, req: upload-request) -> result<option<object>, driver-errors>;
-    }
+    // --- 核心文件操作 ---
+    // 所有可能耗时的 I/O 函数都接受一个可取消的上下文。
+    get-file: func(ctx: borrow<cancellable>, path: string) -> result<object, driver-errors>;
+    get-root: func(ctx: borrow<cancellable>) -> result<object, driver-errors>;
+    list-files: func(ctx: borrow<cancellable>,dir: object) -> result<list<object>, driver-errors>;
+    link-file: func(ctx: borrow<cancellable>, file: object, args: link-args) -> result<link-result, driver-errors>;
+    link-range: func(ctx: borrow<cancellable>, file: object, args: link-args, range: range-spec) -> result<_, driver-errors>;
+    make-dir: func(ctx: borrow<cancellable>, dir: object, name: string) -> result<option<object>, driver-errors>;
+    rename-file: func(ctx: borrow<cancellable>, file: object, new-name: string) -> result<option<object>, driver-errors>;
+    move-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>, driver-errors>;
+    remove-file: func(ctx: borrow<cancellable>, file: object) -> result<_, driver-errors>;
+    copy-file: func(ctx: borrow<cancellable>, file: object, to-dir: object) -> result<option<object>, driver-errors>;
+    upload-file: func(ctx: borrow<cancellable>, dir: object, req: upload-request) -> result<option<object>, driver-errors>;
 }

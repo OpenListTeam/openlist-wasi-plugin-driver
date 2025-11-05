@@ -8,161 +8,135 @@ import (
 
 // This file contains wasmimport and wasmexport declarations for "openlist:plugin-driver@0.1.0".
 
-//go:wasmimport [export]openlist:plugin-driver/exports@0.1.0 [resource-new]driver
-//go:noescape
-func wasmimport_DriverResourceNew(rep0 uint32) (result0 uint32)
-
-//go:wasmimport [export]openlist:plugin-driver/exports@0.1.0 [resource-rep]driver
-//go:noescape
-func wasmimport_DriverResourceRep(self0 uint32) (result0 uint32)
-
-//go:wasmimport [export]openlist:plugin-driver/exports@0.1.0 [resource-drop]driver
-//go:noescape
-func wasmimport_DriverResourceDrop(self0 uint32)
-
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[dtor]driver
-//export openlist:plugin-driver/exports@0.1.0#[dtor]driver
-func wasmexport_DriverDestructor(self0 uint32) {
-	self := cm.Reinterpret[cm.Rep]((uint32)(self0))
-	Exports.Driver.Destructor(self)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#set-handle
+//export openlist:plugin-driver/exports@0.1.0#set-handle
+func wasmexport_SetHandle(handle0 uint32) {
+	handle := (uint32)((uint32)(handle0))
+	Exports.SetHandle(handle)
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[constructor]driver
-//export openlist:plugin-driver/exports@0.1.0#[constructor]driver
-func wasmexport_Constructor() (result0 uint32) {
-	result := Exports.Driver.Constructor()
-	result0 = cm.Reinterpret[uint32](result)
-	return
-}
-
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.copy-file
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.copy-file
-func wasmexport_DriverCopyFile(params *wasmexport_DriverCopyFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
-	result_ := Exports.Driver.CopyFile(params.self, params.ctx, params.file, params.toDir)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#get-properties
+//export openlist:plugin-driver/exports@0.1.0#get-properties
+func wasmexport_GetProperties() (result *DriverProps) {
+	result_ := Exports.GetProperties()
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.drop
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.drop
-func wasmexport_DriverDrop(self0 uint32, ctx0 uint32) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
-	self := cm.Reinterpret[cm.Rep]((uint32)(self0))
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#get-form-meta
+//export openlist:plugin-driver/exports@0.1.0#get-form-meta
+func wasmexport_GetFormMeta() (result *cm.List[FormField]) {
+	result_ := Exports.GetFormMeta()
+	result = &result_
+	return
+}
+
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#init
+//export openlist:plugin-driver/exports@0.1.0#init
+func wasmexport_Init(ctx0 uint32) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
 	ctx := cm.Reinterpret[cm.Rep]((uint32)(ctx0))
-	result_ := Exports.Driver.Drop(self, ctx)
+	result_ := Exports.Init(ctx)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.get-file
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.get-file
-func wasmexport_DriverGetFile(self0 uint32, ctx0 uint32, path0 *uint8, path1 uint32) (result *cm.Result[ObjectShape, Object, DriverErrors]) {
-	self := cm.Reinterpret[cm.Rep]((uint32)(self0))
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#drop
+//export openlist:plugin-driver/exports@0.1.0#drop
+func wasmexport_Drop(ctx0 uint32) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
+	ctx := cm.Reinterpret[cm.Rep]((uint32)(ctx0))
+	result_ := Exports.Drop(ctx)
+	result = &result_
+	return
+}
+
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#get-file
+//export openlist:plugin-driver/exports@0.1.0#get-file
+func wasmexport_GetFile(ctx0 uint32, path0 *uint8, path1 uint32) (result *cm.Result[ObjectShape, Object, DriverErrors]) {
 	ctx := cm.Reinterpret[cm.Rep]((uint32)(ctx0))
 	path := cm.LiftString[string]((*uint8)(path0), (uint32)(path1))
-	result_ := Exports.Driver.GetFile(self, ctx, path)
+	result_ := Exports.GetFile(ctx, path)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.get-form-meta
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.get-form-meta
-func wasmexport_DriverGetFormMeta(self0 uint32) (result *cm.List[FormField]) {
-	self := cm.Reinterpret[cm.Rep]((uint32)(self0))
-	result_ := Exports.Driver.GetFormMeta(self)
-	result = &result_
-	return
-}
-
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.get-properties
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.get-properties
-func wasmexport_DriverGetProperties(self0 uint32) (result *DriverProps) {
-	self := cm.Reinterpret[cm.Rep]((uint32)(self0))
-	result_ := Exports.Driver.GetProperties(self)
-	result = &result_
-	return
-}
-
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.get-root
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.get-root
-func wasmexport_DriverGetRoot(self0 uint32, ctx0 uint32) (result *cm.Result[ObjectShape, Object, DriverErrors]) {
-	self := cm.Reinterpret[cm.Rep]((uint32)(self0))
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#get-root
+//export openlist:plugin-driver/exports@0.1.0#get-root
+func wasmexport_GetRoot(ctx0 uint32) (result *cm.Result[ObjectShape, Object, DriverErrors]) {
 	ctx := cm.Reinterpret[cm.Rep]((uint32)(ctx0))
-	result_ := Exports.Driver.GetRoot(self, ctx)
+	result_ := Exports.GetRoot(ctx)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.init
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.init
-func wasmexport_DriverInit(self0 uint32, ctx0 uint32) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
-	self := cm.Reinterpret[cm.Rep]((uint32)(self0))
-	ctx := cm.Reinterpret[cm.Rep]((uint32)(ctx0))
-	result_ := Exports.Driver.Init(self, ctx)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#list-files
+//export openlist:plugin-driver/exports@0.1.0#list-files
+func wasmexport_ListFiles(params *wasmexport_ListFiles_params) (result *cm.Result[DriverErrorsShape, cm.List[Object], DriverErrors]) {
+	result_ := Exports.ListFiles(params.ctx, params.dir)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.link-file
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.link-file
-func wasmexport_DriverLinkFile(params *wasmexport_DriverLinkFile_params) (result *cm.Result[LinkResultShape, LinkResult, DriverErrors]) {
-	result_ := Exports.Driver.LinkFile(params.self, params.ctx, params.file, params.args)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#link-file
+//export openlist:plugin-driver/exports@0.1.0#link-file
+func wasmexport_LinkFile(params *wasmexport_LinkFile_params) (result *cm.Result[LinkResultShape, LinkResult, DriverErrors]) {
+	result_ := Exports.LinkFile(params.ctx, params.file, params.args)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.link-range
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.link-range
-func wasmexport_DriverLinkRange(params *wasmexport_DriverLinkRange_params) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
-	result_ := Exports.Driver.LinkRange(params.self, params.ctx, params.file, params.args, params.range_)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#link-range
+//export openlist:plugin-driver/exports@0.1.0#link-range
+func wasmexport_LinkRange(params *wasmexport_LinkRange_params) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
+	result_ := Exports.LinkRange(params.ctx, params.file, params.args, params.range_)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.list-files
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.list-files
-func wasmexport_DriverListFiles(params *wasmexport_DriverListFiles_params) (result *cm.Result[DriverErrorsShape, cm.List[Object], DriverErrors]) {
-	result_ := Exports.Driver.ListFiles(params.self, params.ctx, params.dir)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#make-dir
+//export openlist:plugin-driver/exports@0.1.0#make-dir
+func wasmexport_MakeDir(params *wasmexport_MakeDir_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
+	result_ := Exports.MakeDir(params.ctx, params.dir, params.name)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.make-dir
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.make-dir
-func wasmexport_DriverMakeDir(params *wasmexport_DriverMakeDir_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
-	result_ := Exports.Driver.MakeDir(params.self, params.ctx, params.dir, params.name)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#rename-file
+//export openlist:plugin-driver/exports@0.1.0#rename-file
+func wasmexport_RenameFile(params *wasmexport_RenameFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
+	result_ := Exports.RenameFile(params.ctx, params.file, params.newName)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.move-file
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.move-file
-func wasmexport_DriverMoveFile(params *wasmexport_DriverMoveFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
-	result_ := Exports.Driver.MoveFile(params.self, params.ctx, params.file, params.toDir)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#move-file
+//export openlist:plugin-driver/exports@0.1.0#move-file
+func wasmexport_MoveFile(params *wasmexport_MoveFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
+	result_ := Exports.MoveFile(params.ctx, params.file, params.toDir)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.remove-file
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.remove-file
-func wasmexport_DriverRemoveFile(params *wasmexport_DriverRemoveFile_params) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
-	result_ := Exports.Driver.RemoveFile(params.self, params.ctx, params.file)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#remove-file
+//export openlist:plugin-driver/exports@0.1.0#remove-file
+func wasmexport_RemoveFile(params *wasmexport_RemoveFile_params) (result *cm.Result[DriverErrors, struct{}, DriverErrors]) {
+	result_ := Exports.RemoveFile(params.ctx, params.file)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.rename-file
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.rename-file
-func wasmexport_DriverRenameFile(params *wasmexport_DriverRenameFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
-	result_ := Exports.Driver.RenameFile(params.self, params.ctx, params.file, params.newName)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#copy-file
+//export openlist:plugin-driver/exports@0.1.0#copy-file
+func wasmexport_CopyFile(params *wasmexport_CopyFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
+	result_ := Exports.CopyFile(params.ctx, params.file, params.toDir)
 	result = &result_
 	return
 }
 
-//go:wasmexport openlist:plugin-driver/exports@0.1.0#[method]driver.upload-file
-//export openlist:plugin-driver/exports@0.1.0#[method]driver.upload-file
-func wasmexport_DriverUploadFile(params *wasmexport_DriverUploadFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
-	result_ := Exports.Driver.UploadFile(params.self, params.ctx, params.dir, params.req)
+//go:wasmexport openlist:plugin-driver/exports@0.1.0#upload-file
+//export openlist:plugin-driver/exports@0.1.0#upload-file
+func wasmexport_UploadFile(params *wasmexport_UploadFile_params) (result *cm.Result[OptionObjectShape, cm.Option[Object], DriverErrors]) {
+	result_ := Exports.UploadFile(params.ctx, params.dir, params.req)
 	result = &result_
 	return
 }

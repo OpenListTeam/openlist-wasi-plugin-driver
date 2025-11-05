@@ -35,49 +35,37 @@ func (r *RootPath) GetRoot(ctx context.Context) (*drivertypes.Object, error) {
 	}, nil
 }
 
-type DriverHandle uint32
+type DriverHandle struct {
+}
 
 func (c DriverHandle) GetHandle() uint32 {
-	return uint32(c)
-}
-func (c *DriverHandle) SetHandle(handle uint32) {
-	*c = DriverHandle(handle)
+	return hostHeadle
 }
 
 func (c DriverHandle) LoadConfig(val any) error {
-	result := driverimports.LoadConfig(uint32(c))
-	if result.IsErr() {
-		return errors.New(*result.Err())
-	}
-	return json.Unmarshal(result.OK().Slice(), val)
+	return LoadConfig(val)
 }
 
 func (c DriverHandle) SaveConfig(val any) error {
-	config, err := json.Marshal(val)
-	if err != nil {
-		return err
-	}
-	result := driverimports.SaveConfig(uint32(c), cm.ToList(config))
-	if result.IsErr() {
-		return errors.New(*result.Err())
-	}
-	return nil
+	return SaveConfig(val)
 }
 
-func LoadConfig(driver Driver, val any) error {
-	result := driverimports.LoadConfig(driver.GetHandle())
+var hostHeadle uint32 = 0
+
+func LoadConfig(val any) error {
+	result := driverimports.LoadConfig(hostHeadle)
 	if result.IsErr() {
 		return errors.New(*result.Err())
 	}
 	return json.Unmarshal(result.OK().Slice(), val)
 }
 
-func SaveConfig(driver Driver, val any) error {
+func SaveConfig(val any) error {
 	config, err := json.Marshal(val)
 	if err != nil {
 		return err
 	}
-	result := driverimports.SaveConfig(driver.GetHandle(), cm.ToList(config))
+	result := driverimports.SaveConfig(hostHeadle, cm.ToList(config))
 	if result.IsErr() {
 		return errors.New(*result.Err())
 	}

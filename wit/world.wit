@@ -9,9 +9,9 @@ interface host {
     // 由宿主处理的日志函数。
     log: func(level: log-level, message: string);
     // 从宿主获取插件的配置。JSON 类型
-    load-config: func(driver: u32) -> result<list<u8>, string>;
+    load-config: func(handle: u32) -> result<list<u8>, string>;
     // 请求宿主保存插件的配置。JSON 类型
-    save-config: func(driver: u32, config: list<u8>) -> result<_, string>;
+    save-config: func(handle: u32, config: list<u8>) -> result<_, string>;
    
 }
 

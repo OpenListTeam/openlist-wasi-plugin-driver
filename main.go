@@ -16,9 +16,6 @@ import (
 type LinkArgs = exports.LinkArgs
 
 type Driver interface {
-	GetHandle() uint32
-	SetHandle(handle uint32)
-
 	// 获取驱动功能描述
 	GetProperties() drivertypes.DriverProps
 	// 获取配置表单
@@ -66,32 +63,12 @@ type Put interface {
 	Put(ctx context.Context, dstDir drivertypes.Object, file adapter.UploadRequest) (*drivertypes.Object, error)
 }
 
-var DriverManager *adapter.ResourceManager[Driver] = adapter.NewResourceManager[Driver](nil)
-
-type RangeReaderFn = func(offset, size uint64) io.ReadCloser
-
-var RangeReaderManager *adapter.ResourceManager[RangeReaderFn] = adapter.NewResourceManager[RangeReaderFn](nil)
-
-var CreateDriver func() Driver
-
-func init() {
-	exports.Exports.Driver.Constructor = func() (result exports.Driver) {
-		driver := CreateDriver()
-		driverHandle := DriverManager.Add(driver)
-		driver.SetHandle(driverHandle)
-		return exports.Driver(driverHandle)
+func RegisterDriver(driver Driver) {
+	exports.Exports.SetHandle = func(handle uint32) {
+		hostHeadle = handle
 	}
 
-	exports.Exports.Driver.Destructor = func(self cm.Rep) {
-		DriverManager.Remove(uint32(self))
-	}
-
-	exports.Exports.Driver.GetProperties = func(self cm.Rep) (result exports.DriverProps) {
-		driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			panic("DriverErrorsInvalidHandle")
-		}
-
+	exports.Exports.GetProperties = func() (result exports.DriverProps) {
 		properties := driver.GetProperties()
 
 		// 未配置时自动识别
@@ -143,61 +120,44 @@ func init() {
 		return properties
 	}
 
-	exports.Exports.Driver.GetFormMeta = func(self cm.Rep) (result cm.List[exports.FormField]) {
-		driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			panic("DriverErrorsInvalidHandle")
-		}
+	exports.Exports.GetFormMeta = func() (result cm.List[exports.FormField]) {
 		return cm.ToList(driver.GetFormMeta())
 	}
 
-	exports.Exports.Driver.Init = func(self, pctx cm.Rep) (result adapter.Result) {
-		if driver, ok := DriverManager.Get(uint32(self)); ok {
-			ctx, cancel := adapter.WarpCancellable(pctx)
-			defer cancel()
+	exports.Exports.Init = func(pctx cm.Rep) (result adapter.Result) {
+		ctx, cancel := adapter.WarpCancellable(pctx)
+		defer cancel()
 
-			if err := driver.Init(ctx); err != nil {
-				return cm.Err[adapter.Result](adapter.ErrorToDriverError(err))
-			}
-			return cm.OK[adapter.Result](struct{}{})
+		if err := driver.Init(ctx); err != nil {
+			return cm.Err[adapter.Result](adapter.ErrorToDriverError(err))
 		}
-		return cm.Err[adapter.Result](drivertypes.DriverErrorsInvalidHandle())
+		return cm.OK[adapter.Result](struct{}{})
 	}
 
-	exports.Exports.Driver.Drop = func(self, pctx cm.Rep) (result adapter.Result) {
-		if driver, ok := DriverManager.Get(uint32(self)); ok {
-			ctx, cancel := adapter.WarpCancellable(pctx)
-			defer cancel()
+	exports.Exports.Drop = func(pctx cm.Rep) (result adapter.Result) {
+		ctx, cancel := adapter.WarpCancellable(pctx)
+		defer cancel()
 
-			if err := driver.Drop(ctx); err != nil {
-				return cm.Err[cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]](adapter.ErrorToDriverError(err))
-			}
+		if err := driver.Drop(ctx); err != nil {
+			return cm.Err[cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]](adapter.ErrorToDriverError(err))
 		}
 		return cm.OK[cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]](struct{}{})
 	}
 
-	exports.Exports.Driver.GetFile = func(self, pctx cm.Rep, path string) (result adapter.ResultObject) {
-		if driver, ok := DriverManager.Get(uint32(self)); ok {
-			if driver, ok := driver.(Getter); ok {
-				ctx, cancel := adapter.WarpCancellable(pctx)
-				defer cancel()
-				obj, err := driver.Get(ctx, path)
-				if err != nil {
-					return cm.Err[adapter.ResultObject](adapter.ErrorToDriverError(err))
-				}
-				return cm.OK[adapter.ResultObject](*obj)
+	exports.Exports.GetFile = func(pctx cm.Rep, path string) (result adapter.ResultObject) {
+		if driver, ok := driver.(Getter); ok {
+			ctx, cancel := adapter.WarpCancellable(pctx)
+			defer cancel()
+			obj, err := driver.Get(ctx, path)
+			if err != nil {
+				return cm.Err[adapter.ResultObject](adapter.ErrorToDriverError(err))
 			}
-			return cm.Err[adapter.ResultObject](drivertypes.DriverErrorsNotImplemented())
+			return cm.OK[adapter.ResultObject](*obj)
 		}
-		return cm.Err[adapter.ResultObject](drivertypes.DriverErrorsInvalidHandle())
+		return cm.Err[adapter.ResultObject](drivertypes.DriverErrorsNotImplemented())
 	}
 
-	exports.Exports.Driver.GetRoot = func(self, pctx cm.Rep) adapter.ResultObject {
-		driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.ResultObject](drivertypes.DriverErrorsInvalidHandle())
-		}
-
+	exports.Exports.GetRoot = func(pctx cm.Rep) adapter.ResultObject {
 		ctx, cancel := adapter.WarpCancellable(pctx)
 		defer cancel()
 
@@ -208,11 +168,7 @@ func init() {
 		return cm.OK[adapter.ResultObject](*root)
 	}
 
-	exports.Exports.Driver.ListFiles = func(self, pctx cm.Rep, dir exports.Object) (result adapter.ResultObjects) {
-		driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.ResultObjects](drivertypes.DriverErrorsInvalidHandle())
-		}
+	exports.Exports.ListFiles = func(pctx cm.Rep, dir exports.Object) (result adapter.ResultObjects) {
 		// driver, ok := _driver.(Reader)
 		// if !ok {
 		// 	return cm.Err[adapter.ResultObjects](drivertypes.DriverErrorsNotImplemented())
@@ -227,11 +183,7 @@ func init() {
 		return adapter.ReturnOkObjects(objs)
 	}
 
-	exports.Exports.Driver.LinkFile = func(self, pctx cm.Rep, file exports.Object, args exports.LinkArgs) (result cm.Result[exports.LinkResultShape, exports.LinkResult, exports.DriverErrors]) {
-		driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[cm.Result[exports.LinkResultShape, exports.LinkResult, exports.DriverErrors]](drivertypes.DriverErrorsInvalidHandle())
-		}
+	exports.Exports.LinkFile = func(pctx cm.Rep, file exports.Object, args exports.LinkArgs) (result cm.Result[exports.LinkResultShape, exports.LinkResult, exports.DriverErrors]) {
 		// driver, ok := _driver.(Reader)
 		// if !ok {
 		// 	return cm.Err[cm.Result[exports.LinkResultShape, exports.LinkResult, exports.DriverErrors]](drivertypes.DriverErrorsNotImplemented())
@@ -250,15 +202,10 @@ func init() {
 		})
 	}
 
-	exports.Exports.Driver.LinkRange = func(self, pctx cm.Rep, file exports.Object, args exports.LinkArgs, range_ exports.RangeSpec) (result cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]) {
-		_driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]](drivertypes.DriverErrorsInvalidHandle())
-		}
-
+	exports.Exports.LinkRange = func(pctx cm.Rep, file exports.Object, args exports.LinkArgs, range_ exports.RangeSpec) (result cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]) {
 		ctx, cancel := adapter.WarpCancellable(pctx)
 		defer cancel()
-		driver, ok := _driver.(StreamReader)
+		driver, ok := driver.(StreamReader)
 		if !ok {
 			return cm.Err[cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]](drivertypes.DriverErrorsNotImplemented())
 		}
@@ -272,12 +219,8 @@ func init() {
 		return cm.OK[cm.Result[exports.DriverErrors, struct{}, exports.DriverErrors]](struct{}{})
 	}
 
-	exports.Exports.Driver.MakeDir = func(self, pctx cm.Rep, dir exports.Object, name string) (result adapter.ResultOptionObject) {
-		_driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsInvalidHandle())
-		}
-		driver, ok := _driver.(Mkdir)
+	exports.Exports.MakeDir = func(pctx cm.Rep, dir exports.Object, name string) (result adapter.ResultOptionObject) {
+		driver, ok := driver.(Mkdir)
 		if !ok {
 			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsNotImplemented())
 		}
@@ -291,12 +234,8 @@ func init() {
 		return adapter.ReturnOkOptionObject(obj)
 	}
 
-	exports.Exports.Driver.RenameFile = func(self cm.Rep, pctx cm.Rep, file exports.Object, newName string) (result adapter.ResultOptionObject) {
-		_driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsInvalidHandle())
-		}
-		driver, ok := _driver.(Rename)
+	exports.Exports.RenameFile = func(pctx cm.Rep, file exports.Object, newName string) (result adapter.ResultOptionObject) {
+		driver, ok := driver.(Rename)
 		if !ok {
 			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsNotImplemented())
 		}
@@ -310,12 +249,8 @@ func init() {
 		return adapter.ReturnOkOptionObject(obj)
 	}
 
-	exports.Exports.Driver.MoveFile = func(self, pctx cm.Rep, file, toDir exports.Object) (result adapter.ResultOptionObject) {
-		_driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsInvalidHandle())
-		}
-		driver, ok := _driver.(Move)
+	exports.Exports.MoveFile = func(pctx cm.Rep, file, toDir exports.Object) (result adapter.ResultOptionObject) {
+		driver, ok := driver.(Move)
 		if !ok {
 			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsNotImplemented())
 		}
@@ -329,12 +264,8 @@ func init() {
 		return adapter.ReturnOkOptionObject(obj)
 	}
 
-	exports.Exports.Driver.RemoveFile = func(self, pctx cm.Rep, file exports.Object) (result adapter.Result) {
-		_driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.Result](drivertypes.DriverErrorsInvalidHandle())
-		}
-		driver, ok := _driver.(Remove)
+	exports.Exports.RemoveFile = func(pctx cm.Rep, file exports.Object) (result adapter.Result) {
+		driver, ok := driver.(Remove)
 		if !ok {
 			return cm.Err[adapter.Result](drivertypes.DriverErrorsNotImplemented())
 		}
@@ -349,12 +280,8 @@ func init() {
 		return adapter.ReturnOk()
 	}
 
-	exports.Exports.Driver.CopyFile = func(self, pctx cm.Rep, file, toDir exports.Object) (result adapter.ResultOptionObject) {
-		_driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsInvalidHandle())
-		}
-		driver, ok := _driver.(Copy)
+	exports.Exports.CopyFile = func(pctx cm.Rep, file, toDir exports.Object) (result adapter.ResultOptionObject) {
+		driver, ok := driver.(Copy)
 		if !ok {
 			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsNotImplemented())
 		}
@@ -368,12 +295,8 @@ func init() {
 		return adapter.ReturnOkOptionObject(obj)
 	}
 
-	exports.Exports.Driver.UploadFile = func(self, pctx cm.Rep, dir exports.Object, req exports.UploadRequest) (result adapter.ResultOptionObject) {
-		_driver, ok := DriverManager.Get(uint32(self))
-		if !ok {
-			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsInvalidHandle())
-		}
-		driver, ok := _driver.(Put)
+	exports.Exports.UploadFile = func(pctx cm.Rep, dir exports.Object, req exports.UploadRequest) (result adapter.ResultOptionObject) {
+		driver, ok := driver.(Put)
 		if !ok {
 			return cm.Err[adapter.ResultOptionObject](drivertypes.DriverErrorsNotImplemented())
 		}
