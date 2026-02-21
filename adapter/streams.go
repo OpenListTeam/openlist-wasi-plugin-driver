@@ -104,7 +104,10 @@ func (s *InputStream) Read(p []byte) (int, error) {
 		}
 	}
 
-	return copy(p, data.Slice()), nil
+	wasiSlice := data.Slice()
+	defer freeWasiSlice(wasiSlice)
+
+	return copy(p, wasiSlice), nil
 }
 
 func (s *InputStream) Close() error {
@@ -127,7 +130,7 @@ func (us *UploadRequest) GetHash(hashs []drivertypes.HashAlg) ([]drivertypes.Has
 	if iserr {
 		return nil, errors.New(err)
 	}
-	return infos.Slice(), nil
+	return cloneSliceAndFree(infos.Slice()), nil
 }
 
 func (us *UploadRequest) UpdateProgress(progress float64) {
